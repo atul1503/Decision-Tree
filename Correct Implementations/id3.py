@@ -10,6 +10,9 @@ l=[]
 
 
 class tree:
+    
+    string_of_tree=''
+
     def __init__(self):
         self.parent=null
         self.semiVariable=null
@@ -23,12 +26,16 @@ class tree:
         if self.final!=1:
             if self.parent!=null:
                 print('Tree Depth ',self.depth,' : ',self.semiVariable,'->',self.name,' [',end=' ')
+                tree.string_of_tree+=('Tree Depth '+str(self.depth)+' : '+str(self.semiVariable)+'->'+str(self.name)+' [  ')
             else:
                 print('Tree Depth ',self.depth,' : ',self.name,' [',end=' ')
+                tree.string_of_tree+=('Tree Depth '+str(self.depth)+' : '+str(self.name)+' [  ')
                 
             for i in range(len(self.children)):
                 print(self.children[i].semiVariable,'->',self.children[i].name,end=', ')
+                tree.string_of_tree+=(str(self.children[i].semiVariable)+'->'+str(self.children[i].name)+'  ')
             print(']')
+            tree.string_of_tree+=']\n'
             for i in range(len(self.children)):
                 self.children[i].bfs()
                 
@@ -352,6 +359,7 @@ def multiClassifier(classes,attributes,subset,maxDepth,targetIndex):
         print('Decision Tree for ',classes[i])
         print('--------------------\n\n\n')
         objects[i].bfs()
+        tree.string_of_tree+='\n\n\n'
         print('--------------------\n\n\n')
         #DecisionTreeLearn(attributes,node,stopper,targetIndex,targetLabels)
         
@@ -388,5 +396,13 @@ else:
     print('Decision Tree for ',data[0][targetIndex])
     print('--------------------\n\n\n')
     node.bfs()
+    tree.string_of_tree+='\n\n\n'
     print('--------------------\n\n\n')
+
+isSave=input('Save the string representation of the tree/trees to saveTree.txt file? yes or no ; default is no : ') or 'no'
+if isSave=='yes':
+    f=open('saveTree.txt','w')
+    f.write(tree.string_of_tree)
+    f.close()
+    print('saveTree.txt file saved successfully!\n')
 input()
