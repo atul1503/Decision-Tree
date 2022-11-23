@@ -1,18 +1,13 @@
-'''
-Documentation:
----------------
-
-Version 1.7:-
-                1)Added support for working with subsets of data rather than all the data sets.Scanning all data sets comes with a drawback that it takes a lot of memory and processing power to handle large datasets,so now you have the option of skipping datasets and working with only a specified no. of datasets.                
 
 
-
-'''
 from math import log
 
 
+print('Remember: you should have added eof at the end of the file\n\n')
 fileName=input('Enter the file path: ')
 null=-999
+l=[]
+
 
 class tree:
     def __init__(self):
@@ -26,16 +21,25 @@ class tree:
                     
     def bfs(self):
         if self.final!=1:
-            print('Tree Depth: ',self.depth,' : ',self.name,' [',end=' ')
+            if self.parent!=null:
+                print('Tree Depth ',self.depth,' : ',self.semiVariable,'->',self.name,' [',end=' ')
+            else:
+                print('Tree Depth ',self.depth,' : ',self.name,' [',end=' ')
+                
             for i in range(len(self.children)):
                 print(self.children[i].semiVariable,'->',self.children[i].name,end=', ')
             print(']')
             for i in range(len(self.children)):
                 self.children[i].bfs()
+                
+            
+            
+            
+            
 
 e=lambda a,b:(-1)*(a/(a+b))*log(a/(a+b))+(-1)*(b/(a+b))*log(b/(a+b))
 
-def targetCount(subset,targetIndex):  #gets the count of positive and negative of target attribute
+def targetCount(subset,targetIndex,targetLabels):  #gets the count of positive and negative of target attribute
     pos=0
     neg=0
     for i in range(1,len(subset)):
@@ -47,13 +51,13 @@ def targetCount(subset,targetIndex):  #gets the count of positive and negative o
 
 def Count(subset,index,pattern):
     count=0
-    for i in range(len(subset)):
+    for i in range(1,len(subset)):
         if subset[i][index]==pattern:
            count=count+1
     return count
 
 
-def attValueCount(subset,index,value,targetIndex):
+def attValueCount(subset,index,value,targetIndex,targetLabels):
     pos=0
     neg=0
     for i in range(len(subset)):
@@ -63,8 +67,8 @@ def attValueCount(subset,index,value,targetIndex):
             neg=neg+1
     return pos,neg
     
-def targetEntropy(subset,targetIndex):
-    pos,neg=targetCount(subset,targetIndex)
+def targetEntropy(subset,targetIndex,targetLabels):
+    pos,neg=targetCount(subset,targetIndex,targetLabels)
     posProb=0
     negProb=0
     if pos==0:
@@ -74,8 +78,8 @@ def targetEntropy(subset,targetIndex):
     entropy=-((pos)/(neg+pos))*log((pos)/(neg+pos))-((neg)/(neg+pos))*log((neg)/(neg+pos))
     return entropy    
 
-def attEntropy(subset,index,pattern,targetIndex):
-    temp=attValueCount(subset,index,pattern,targetIndex)
+def attEntropy(subset,index,pattern,targetIndex,targetLabels):
+    temp=attValueCount(subset,index,pattern,targetIndex,targetLabels)
     if temp[0]==0 or temp[1]==0:
         return 0
     entropy=e(temp[0],temp[1])
@@ -88,28 +92,29 @@ def getVariety(subset,index):
             un.append(subset[i][index])
     return un
 
-def calcInfGain(subset,index,targetIndex):
+def calcInfGain(subset,index,targetIndex,targetLabels):
     sum=0
     un=getVariety(subset,index)
     for i in range(len(un)):
-        sum=sum+((-1)*Count(subset,index,un[i])/(len(subset)-1))*attEntropy(subset,index,un[i],targetIndex)
+        sum=sum+((-1)*Count(subset,index,un[i])/(len(subset)-1))*attEntropy(subset,index,un[i],targetIndex,targetLabels)
     
-    InfGain=targetEntropy(subset,targetIndex)+sum
+    InfGain=targetEntropy(subset,targetIndex,targetLabels)+sum
     return InfGain
     
-def rootNodeIndex(subset,targetIndex):
+def rootNodeIndex(subset,targetIndex,targetLabels):
     l=[]
     index=0
     for i in range(len(subset[0])):
         if i!=targetIndex:
-            temp=[calcInfGain(subset,i,targetIndex),i]
+            temp=[calcInfGain(subset,i,targetIndex,targetLabels),i]
             l.append(temp)
     try:    
         maxi=l[0][0]
     except:
-        print("\nCan't find a better model.Try adding more attributes.Error in rootNodeIndex().")
+        print("\nCan't find a better model.Try adding more attributes.")
         input()
-        quit()
+        exit()
+        
     for i in range(len(l)):
         if maxi<l[i][0]:
             maxi=l[i][0]
@@ -138,8 +143,8 @@ def extractor(subset,index,value):
     return l    
     
     
-def DecisionTreeLearn(attributes,node,stopper,targetIndex):
-    if targetEntropy(node.data,targetIndex)==0 or node.depth>=stopper:
+def DecisionTreeLearn(attributes,node,stopper,targetIndex,targetLabels):
+    if targetEntropy(node.data,targetIndex,targetLabels)==0 or (node.depth>=stopper and stopper>0):
         try:
             y=Count(node.data,targetIndex,targetLabels[0])
             n=Count(node.data,targetIndex,targetLabels[1])
@@ -158,7 +163,7 @@ def DecisionTreeLearn(attributes,node,stopper,targetIndex):
         node.final=1
         return
     info=[x[:] for x in node.data]
-    index=rootNodeIndex(info,targetIndex)
+    index=rootNodeIndex(info,targetIndex,targetLabels)
     node.name=info[0][index]
     uni=getVariety(info,index)
     depth=node.depth
@@ -175,7 +180,8 @@ def DecisionTreeLearn(attributes,node,stopper,targetIndex):
         node.children[i].parent=node
         node.children[i].depth=depth+1
         node.children[i].data=child[i]
-        DecisionTreeLearn(attributes,node.children[i],stopper,targetIndex)
+        DecisionTreeLearn(attributes,node.children[i],stopper,targetIndex,targetLabels)
+    node.data=0
         
 def isNum(subset,index):
         try:
@@ -226,6 +232,11 @@ def readData(fileName,delim,skip=200,end=100):
     attributeNames=temp.split(delim)
     for line in f:
         if skip==0:
+            if ('eof' in line):
+                break;
+            line=line[:-1]
+            list=line.split(delim)
+            data.append(list)
             break
         skip=skip-1
         
@@ -243,6 +254,37 @@ def readData(fileName,delim,skip=200,end=100):
     
     
 def cleaner(subset,dc):
+    if dc!=['']:
+        for idx in dc:
+            if '-' in idx:
+                idx.strip()
+                sexp=0
+                snum=0
+                for i in range(len(idx)-1,-1,-1):
+                    if idx[i]=='-':
+                        break
+                    else:
+                        snum=snum+int(idx[i])*(10**sexp)
+                        sexp=sexp+1
+                fexp=0
+                fnum=0
+                for j in range(i-1,-1,-1):
+                    if idx[j]=='-':
+                        break
+                    else:
+                        fnum=fnum+int(idx[j])*(10**fexp)
+                        fexp=fexp+1
+                        
+                dc=dc+list(range(fnum,snum+1))
+        
+        i=0
+        while i<len(dc):
+            if isinstance(dc[i],str) and  '-' in dc[i]:
+                dc.pop(i)
+                i=i-1
+            i=i+1
+            
+            
     if dc !=['']:
         for i in range(len(dc)):
             dc[i]=int(dc[i])
@@ -270,33 +312,81 @@ def cleaner(subset,dc):
         l[i]=l[i]-i
     for i in l:
         subset.pop(i)
+        
+def beautify(subset):
+    for i in range(len(subset)):
+        for j in range(len(subset[i])):
+            print(subset[i][j],end=1*' ')
+        print()
+
+
+
+
+        
     
+def multiClassifier(classes,attributes,subset,maxDepth,targetIndex):
+    copy=tuple(tuple(x) for x in subset)
+    targetIndexCopy=targetIndex
+    objects=[0]*len(classes)
+    for i in range(len(classes)):
+        subset=list(list(x) for x in copy)
+        targetIndex=targetIndexCopy
+        for j in range(len(subset)):
+            if classes[i]==subset[j][targetIndex]:
+                subset[j].append(classes[i])
+                subset[j].pop(targetIndex)
+            elif j!=0:
+                subset[j].append('Not '+classes[i])
+                subset[j].pop(targetIndex)
+            elif j==0:
+                subset[j].append(classes[i])
+                subset[j].pop(targetIndex)
+                
+        targetIndex=len(subset[0])-1
+        objects[i]=tree()
+        targetLabels=['Not '+classes[i],classes[i]]
+        distinct=[]
+        targetIndex=postProcess(subset,attributes,distinct,targetIndex)
+        objects[i].data=subset
+        DecisionTreeLearn(attributes,objects[i],maxDepth,targetIndex,targetLabels)
+        print('Decision Tree for ',classes[i])
+        print('--------------------\n\n\n')
+        objects[i].bfs()
+        print('--------------------\n\n\n')
+        #DecisionTreeLearn(attributes,node,stopper,targetIndex,targetLabels)
+        
+        
 
 
+delim=input('Enter the delimiter like comma or space etc ; default is comma : ') or ','
 
-
-delim=input('Enter the delimiter like comma or space etc. :') or ','
-
-attributeNames,data=readData(fileName,delim,int(input("Enter the no. of data sets to skip. Don't enter 0 :")),int(input('Enter the no. of training data sets :')))
+attributeNames,data=readData(fileName,delim,int(float(input("Enter the no. of data sets to skip ; default is 0 : ") or 0)),
+int(float(input('Enter the no. of training data sets ; default is 100 : ') or 100)))
 data.insert(0,attributeNames)
 print('\n\nAttribute Names with Index:')
 for i in range(len(attributeNames)):
     print(i,':',attributeNames[i],end=' , ')
-dc=input("\nEnter the indexes of all don't care attributes ,those attributes will be removed . If you donot wish to then press enter:").split(',')
-cleaner(data,dc)
+dc=input("\nEnter the indexes or index range of attributes that are to be elliminated ; default is none ; Here enter range as startIndex,endIndex , like , 5,4  ; : ").split(',')
+if dc!=[''] : 
+    cleaner(data,dc)
 print('\n\nAttribute Names with Index:')
 for i in range(len(data[0])):
     print(i,':',data[0][i],end=' , ')
 print('\n\n')
-targetIndex=int(input('\nEnter the index of the target attribute.Use 0 indexing : '))
-global targetLabels
-targetLabels=getVariety(data,targetIndex)
-start=tree()
-distinct=[]
-targetIndex=postProcess(data,attributeNames,distinct,targetIndex)
-start.data=data
-maxDepth=float(input('Enter the max depth:'))
-DecisionTreeLearn(attributeNames,start,maxDepth,targetIndex)
-print('\n\n\n--------------------\n\n\n')
-start.bfs()
-input('\n\n\n--------------------\n\n\n')
+targetIndex=int(input('\nEnter the index of the target attribute ; default is last index : ') or len(data[0])-1)
+maxDepth=float(input('Enter the max depth ; default is infinity : ') or -1) 
+print()
+classes=getVariety(data,targetIndex)
+if len(classes)>2:
+    multiClassifier(classes,attributeNames,data,maxDepth,targetIndex)
+else:
+    node=tree()
+    distinct=[]
+    targetIndex=postProcess(data,attributeNames,distinct,targetIndex)
+    node.data=data
+    DecisionTreeLearn(attributeNames,node,maxDepth,targetIndex,classes)
+    print('Decision Tree for ',data[0][targetIndex])
+    print('--------------------\n\n\n')
+    node.bfs()
+    print('--------------------\n\n\n')
+input()
